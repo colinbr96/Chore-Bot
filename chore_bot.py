@@ -2,7 +2,7 @@ import datetime
 import requests
 
 CURRENT_GROUP_FILE = 'group.txt'
-BOT_ID = 'e7cd7c4d3448e2eadcd0dca190'
+BOT_ID = '58ae5dfd7dfe0acde6da2340f2'
 
 chores = {
     'Monday':   'Living Room & Dining Room',
@@ -43,14 +43,20 @@ def run():
     todaysChore = chores[now.strftime('%A')]
     
     if todaysChore != '':
-        todaysGroup += 1
+        
         if todaysGroup > 4:
             todaysGroup = 1
 
         save_group(todaysGroup)
-        message = '{}, your chore for today is: the {}'.format(groups[todaysGroup-1], todaysChore)
+        message = '{}, your chore for today is: the {}\n({})'.format(
+        	groups[todaysGroup],
+        	todaysChore,
+        	now.strftime('%a, %b %d, %Y')
+        )
+
         http_post(message)
-        print('Bot posted to GroupMe: ' + message)
+        todaysGroup += 1
+        print('POSTED: ' + message)
 
 
 if __name__ == '__main__':
