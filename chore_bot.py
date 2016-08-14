@@ -33,9 +33,10 @@ groups = [
 # Performs an HTTP Post request to GroupMe
 def bot_post(text, bot_ID):
     r = requests.post('https://api.groupme.com/v3/bots/post', data = {
-        'bod_id': bot_ID,
+        'bot_id': bot_ID,
         'text': text
     })
+    print(text)
 
 # Returns the number stored in the group-file
 def load_group_file():
