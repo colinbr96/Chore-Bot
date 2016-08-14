@@ -61,7 +61,9 @@ def chore_notify(date):
         now.strftime('%a, %b %d, %Y')
     )
 
-    bot_post(message)
+    bot_post(message, CHORE_BOT)
+    bot_post('Chore-Bot posted.', NOTIFIER_BOT)
+
     todays_group += 1
     save_group_file(todays_group)
 
@@ -69,7 +71,7 @@ def chore_notify(date):
 def run():
     now = datetime.datetime.now()
     if now.weekday() >= 5: # If it is a weekend
-        bot_post('Chore-Bot aborted post: Weekend', NOTIFIER_BOT)
+        bot_post('Chore-Bot aborted post: Weekend.', NOTIFIER_BOT)
     else:
         chore_notify()
 
