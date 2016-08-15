@@ -48,7 +48,7 @@ def load_group_file():
 
 # Writes the given number to the group-file
 def save_group_file(group_num):
-    file = open(CURRENT_GROUP_FILE, 'w')
+    file = open(GROUP_FILENAME, 'w')
     file.write(str(group_num))
 
 # Builds and posts the chore reminder
@@ -57,9 +57,9 @@ def chore_notify(date):
     todays_group = load_group_file()
 
     message = '{}, your chore for today is: the {}\n({})'.format(
-        groups[todaysGroup-1],
-        todaysChore,
-        now.strftime('%a, %b %d, %Y')
+        groups[todays_group-1],
+        todays_chore,
+        date.strftime('%a, %b %d, %Y')
     )
 
     bot_post(message, CHORE_BOT)
@@ -74,7 +74,7 @@ def run():
     if now.weekday() >= 5: # If it is a weekend
         bot_post('Chore-Bot aborted post: Weekend.', NOTIFIER_BOT)
     else:
-        chore_notify()
+        chore_notify(now)
 
 # ----------------------------------------------------------------------------- EXECUTION
 
