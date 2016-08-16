@@ -2,13 +2,13 @@
 
 import datetime
 import requests # http://docs.python-requests.org/
+import yaml # http://pyyaml.org/
 
 # ----------------------------------------------------------------------------- DATA & CONSTANTS
 
-CONFIG_FILE = 'config.ini'
-CHORE_BOT = ''
-NOTIFIER_BOT = ''
-CURRENT_GROUP = 0
+# Configuration
+CONFIG_FILE = 'config.yaml'
+CONFIG_DATA = dict()
 
 # Chore Schedule
 chores = {
@@ -29,31 +29,23 @@ groups = [
 
 # ----------------------------------------------------------------------------- FUNCTIONS
 
-# Returns the contents of CONFIG_FILE as a dict
+# Loads the contents of config.yaml into CONFIG_DATA
 def load_config_data():
-    global CHORE_BOT, NOTIFIER_BOT, CURRENT_GROUP
+    global CONFIG_DATA
 
-    file = open(CONFIG_FILE, 'r')
-    lines = file.readlines()
-    data = dict()
-    for l in lines:
-        key, value = l.strip().split(' = ')
-        data[key] = value
-    
-    CURRENT_GROUP = int(data['group'])
-    if CURRENT_GROUP > 4:
-        CURRENT_GROUP = 1
-    CHORE_BOT = data['chore_bot']
-    NOTIFIER_BOT = data['notifier_bot']
+    with open(CONFIG_FILE, 'r') as stream:
+        try:
+            CONFIG_DATA = yaml.load(stream)
+        except yaml.YAMLError as err:
+            print(err)
 
+    if CONFIG_DATA['current_group'] > 4:
+        CONFIG_DATA['current_group'] = 1
 
+# Saves the contents of CONFIG_DATA to config.yaml
 def save_config_data():
-    file = open(CONFIG_FILE, 'w')
-    file.writelines([
-        'group = {}\n'.format(CURRENT_GROUP),
-        'chore_bot = {}\n'.format(CHORE_BOT),
-        'notifier_bot = {}'.format(NOTIFIER_BOT)
-    ])
+    with open(CONFIG_FILE, 'w') as ostream:
+        yaml.dump(CONFIG_DATA, ostream, default_flow_style=False)
 
 # Performs an HTTP Post request to GroupMe
 def bot_post(text, bot_ID):
@@ -65,19 +57,19 @@ def bot_post(text, bot_ID):
 
 # Builds and posts the chore reminder
 def chore_notify(date):
-    global CURRENT_GROUP
+    global CONFIG_DATA
 
     todays_chore = chores[date.strftime('%A')]
     message = '{}, your chore for today is: the {}\n({})'.format(
-        groups[CURRENT_GROUP-1],
+        groups[CONFIG_DATA['current_group']-1],
         todays_chore,
         date.strftime('%a, %b %d, %Y')
     )
 
-    bot_post(message, CHORE_BOT)
-    bot_post('Chore-Bot posted.', NOTIFIER_BOT)
+    bot_post(message, CONFIG_DATA['chore_bot'])
+    bot_post('Chore-Bot posted.', CONFIG_DATA['notifier_bot'])
 
-    CURRENT_GROUP += 1
+    CONFIG_DATA['current_group'] += 1
     save_config_data()
 
 # Runs a chore reminder if weekday
@@ -86,7 +78,7 @@ def run():
 
     now = datetime.datetime.now()
     if now.weekday() >= 5: # If it is a weekend
-        bot_post('Chore-Bot aborted post: Weekend.', NOTIFIER_BOT)
+        bot_post('Chore-Bot aborted post: Weekend.', CONFIG_DATA['notifier_bot'])
     else:
         chore_notify(now)
 
