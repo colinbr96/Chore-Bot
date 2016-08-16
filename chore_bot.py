@@ -5,11 +5,10 @@ import requests # http://docs.python-requests.org/
 
 # ----------------------------------------------------------------------------- DATA & CONSTANTS
 
-GROUP_FILENAME = 'group.txt'
-
-# Bot IDs
-CHORE_BOT = '58ae5dfd7dfe0acde6da2340f2'
-NOTIFIER_BOT = 'e7cd7c4d3448e2eadcd0dca190'
+CONFIG_FILE = 'config.ini'
+CHORE_BOT = ''
+NOTIFIER_BOT = ''
+CURRENT_GROUP = 0
 
 # Chore Schedule
 chores = {
@@ -30,6 +29,32 @@ groups = [
 
 # ----------------------------------------------------------------------------- FUNCTIONS
 
+# Returns the contents of CONFIG_FILE as a dict
+def load_config_data():
+    global CHORE_BOT, NOTIFIER_BOT, CURRENT_GROUP
+
+    file = open(CONFIG_FILE, 'r')
+    lines = file.readlines()
+    data = dict()
+    for l in lines:
+        key, value = l.strip().split(' = ')
+        data[key] = value
+    
+    CURRENT_GROUP = int(data['group'])
+    if CURRENT_GROUP > 4:
+        CURRENT_GROUP = 1
+    CHORE_BOT = data['chore_bot']
+    NOTIFIER_BOT = data['notifier_bot']
+
+
+def save_config_data():
+    file = open(CONFIG_FILE, 'w')
+    file.writelines([
+        'group = {}\n'.format(CURRENT_GROUP),
+        'chore_bot = {}\n'.format(CHORE_BOT),
+        'notifier_bot = {}'.format(NOTIFIER_BOT)
+    ])
+
 # Performs an HTTP Post request to GroupMe
 def bot_post(text, bot_ID):
     r = requests.post('https://api.groupme.com/v3/bots/post', data = {
@@ -38,26 +63,13 @@ def bot_post(text, bot_ID):
     })
     print(text)
 
-# Returns the number stored in the group-file
-def load_group_file():
-    file = open(GROUP_FILENAME, 'r')
-    group_num = int(file.read())
-    if group_num > 4:
-        group_num = 1
-    return group_num
-
-# Writes the given number to the group-file
-def save_group_file(group_num):
-    file = open(GROUP_FILENAME, 'w')
-    file.write(str(group_num))
-
 # Builds and posts the chore reminder
 def chore_notify(date):
-    todays_chore = chores[date.strftime('%A')]
-    todays_group = load_group_file()
+    global CURRENT_GROUP
 
+    todays_chore = chores[date.strftime('%A')]
     message = '{}, your chore for today is: the {}\n({})'.format(
-        groups[todays_group-1],
+        groups[CURRENT_GROUP-1],
         todays_chore,
         date.strftime('%a, %b %d, %Y')
     )
@@ -65,11 +77,13 @@ def chore_notify(date):
     bot_post(message, CHORE_BOT)
     bot_post('Chore-Bot posted.', NOTIFIER_BOT)
 
-    todays_group += 1
-    save_group_file(todays_group)
+    CURRENT_GROUP += 1
+    save_config_data()
 
 # Runs a chore reminder if weekday
 def run():
+    load_config_data()
+
     now = datetime.datetime.now()
     if now.weekday() >= 5: # If it is a weekend
         bot_post('Chore-Bot aborted post: Weekend.', NOTIFIER_BOT)
