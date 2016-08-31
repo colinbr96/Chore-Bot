@@ -12,10 +12,10 @@ config_data = dict()
 
 # Chore Schedule
 CHORES = {
-    'Monday':   'Living Room & Dining Room',
-    'Tuesday':  'Kitchen',
+    'Monday':   'Living Room & Front Patio',
+    'Tuesday':  'Kitchen & Dining Room',
     'Wednesday':    'Bathroom & Outside Garbage',
-    'Thursday': 'Kitchen',
+    'Thursday': 'Kitchen & Dining Room',
     'Friday':   'Hallway & Backyard',
 }
 
