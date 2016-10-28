@@ -3,6 +3,7 @@
 # Python Standard Library
 import datetime
 import time
+import sys
 
 # Third Party
 import pytz # http://pytz.sourceforge.net/
@@ -12,10 +13,11 @@ import yaml # http://pyyaml.org/
 # ----------------------------------------------------------------------------- DATA & CONSTANTS
 
 # Configuration
-CONFIG_FILENAME = 'config.yaml'
+CONFIG_FILE = 'config.yaml'
+OUTPUT_FILE = 'output.log'
 config_data = dict() # Populated by load_config_data()
 RUN_HOUR = 9
-RUN_MINUTE = 0
+RUN_MINUTE = 1
 
 # Chore Schedule
 CHORES = {
@@ -48,16 +50,24 @@ class SpamException(Exception):
 
 # ----------------------------------------------------------------------------- FUNCTIONS
 
+def log(message) -> None:
+    template = "{} - {}\n"
+    now = datetime.datetime.now(pytz.timezone('US/Pacific'))
+    date_str = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    with open(OUTPUT_FILE, 'a') as f:
+        f.write(template.format(date_str, message))
+
 def load_config_data() -> None:
     """ Loads the contents of config.yaml into config_data
     """
     global config_data
 
-    with open(CONFIG_FILENAME, 'r') as stream:
+    with open(CONFIG_FILE, 'r') as stream:
         try:
             config_data = yaml.load(stream)
         except yaml.YAMLError as err:
-            print(err)
+            log(err)
 
     if config_data['current_group'] > 4:
         config_data['current_group'] = 1
@@ -65,7 +75,7 @@ def load_config_data() -> None:
 def save_config_data() -> None:
     """ Saves the contents of config_data to config.yaml
     """
-    with open(CONFIG_FILENAME, 'w') as ostream:
+    with open(CONFIG_FILE, 'w') as ostream:
         yaml.dump(config_data, ostream, default_flow_style=False)
 
 def post_str(now) -> str:
@@ -81,7 +91,7 @@ def post_str(now) -> str:
 def bot_post(text, bot_ID) -> None:
     """ Performs an HTTP Post request to GroupMe
     """
-    print("{}: {}".format(bot_ID, text))
+    log("{}: {}".format(bot_ID, text))
 
     r = requests.post('https://api.groupme.com/v3/bots/post', data = {
         'bot_id': bot_ID,
@@ -100,6 +110,8 @@ def chore_post(now) -> None:
     message = post_str(now)
 
     bot_post(message, config_data['chore_bot'])
+    debug_post(message)
+
     config_data['current_group'] += 1
     config_data['last_ran'] = int(now.timestamp())
     save_config_data()
@@ -107,6 +119,7 @@ def chore_post(now) -> None:
 def pass_checks(now) -> None:
     """ Raises the appropriate Exception for SpamError or WeekendError
     """
+    log("Attempting to pass checks")
     seconds_since_last_post = int(now.timestamp()) - config_data['last_ran']
 
     if seconds_since_last_post < 64800: # If it has not been at least 18 hours
@@ -121,12 +134,14 @@ def run() -> None:
         Sleeps for a minute after posting
     """
     while True:
+        log("Looped")
+
         now = datetime.datetime.now(pytz.timezone('US/Pacific'))
         next_run = datetime.datetime(now.year, now.month, now.day, RUN_HOUR, RUN_MINUTE, 0)
         delta = next_run - now.replace(tzinfo=None)
 
-        if (delta.seconds // 60) < 60:
-            if delta.seconds < 60:
+        if (delta.seconds // 60) < 60: # Within hour
+            if delta.seconds < 60: # Within minute
                 load_config_data()
                 try:
                     pass_checks(now)
@@ -136,13 +151,18 @@ def run() -> None:
                     debug_post("ABORTING - Spam: Chore-Bot ran {} seconds ago. (< 64800)".format(seconds_since_last_post))
                 except WeekendException:
                     debug_post("ABORTING - Weekend: {}".format(now.strftime('%A')))
+
+                log("Sleeping for 1 minute")
                 time.sleep(60)
             else:
+                log("Sleeping for 30 seconds")
                 time.sleep(30)
         else:
+            log("Sleeping for 1 hour")
             time.sleep(3600)
 
 # ----------------------------------------------------------------------------- EXECUTION
 
 if __name__ == '__main__':
+    log("Starting up")
     run()
