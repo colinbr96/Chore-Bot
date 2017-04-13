@@ -1,16 +1,16 @@
-# ----------------------------------------------------------------------------- IMPORTS
+# ------------------------------------------------------------------- IMPORTS
 
 # Python Standard Library
 import datetime
 import time
-import sys
+import traceback
 
 # Third Party
 import pytz # http://pytz.sourceforge.net/
 import requests # http://docs.python-requests.org/
 import yaml # http://pyyaml.org/
 
-# ----------------------------------------------------------------------------- DATA & CONSTANTS
+# ------------------------------------------------------------------- DATA & CONSTANTS
 
 # Configuration
 CONFIG_FILE = 'config.yaml'
@@ -30,25 +30,26 @@ CHORES = {
 
 # Roommate Groups
 GROUPS = [
-    'Aaron & Rachel',
-    'Colin & Jasper',
-    'Christina & Rod',
-    'Georgina & Luis'
+    'Aaron & Rachel',  #1
+    'Colin & Jasper',  #2
+    'Christina & Rod', #3
+    'Georgina & Luis'  #4
 ]
 
-# ----------------------------------------------------------------------------- EXCEPTIONS
+# ------------------------------------------------------------------- EXCEPTIONS
 
 class WeekendException(Exception):
     """ Raised if the bot tries to post on a weekend
     """
     pass
 
+
 class SpamException(Exception):
     """ Raised if the bot tries to post within 18 hours of its last post
     """
     pass
 
-# ----------------------------------------------------------------------------- FUNCTIONS
+# ------------------------------------------------------------------- FUNCTIONS
 
 def log(message) -> None:
     template = "{} - {}\n"
@@ -57,6 +58,7 @@ def log(message) -> None:
 
     with open(OUTPUT_FILE, 'a') as f:
         f.write(template.format(date_str, message))
+
 
 def load_config_data() -> None:
     """ Loads the contents of config.yaml into config_data
@@ -72,11 +74,13 @@ def load_config_data() -> None:
     if config_data['current_group'] > 4:
         config_data['current_group'] = 1
 
+
 def save_config_data() -> None:
     """ Saves the contents of config_data to config.yaml
     """
     with open(CONFIG_FILE, 'w') as ostream:
         yaml.dump(config_data, ostream, default_flow_style=False)
+
 
 def post_str(now) -> str:
     """ Returns the appropriate message for the chore reminder
@@ -88,6 +92,7 @@ def post_str(now) -> str:
         now.strftime('%a, %b %d, %Y')
     )
 
+
 def bot_post(text, bot_ID) -> None:
     """ Performs an HTTP Post request to GroupMe
     """
@@ -98,10 +103,12 @@ def bot_post(text, bot_ID) -> None:
         'text': text
     })
 
+
 def debug_post(text) -> None:
     """ Posts to the Debugging Bot
     """
     bot_post(text, config_data['debug_bot'])
+
 
 def chore_post(now) -> None:
     """ Posts the chore reminder and updates the config_data
@@ -116,6 +123,7 @@ def chore_post(now) -> None:
     config_data['last_ran'] = int(now.timestamp())
     save_config_data()
 
+
 def pass_checks(now) -> None:
     """ Raises the appropriate Exception for SpamError or WeekendError
     """
@@ -127,6 +135,7 @@ def pass_checks(now) -> None:
     if now.weekday() >= 5: # If it is a weekend
         raise WeekendException
 
+
 def run() -> None:
     """ Checks every hour to see if the post is within the hour
         If the post is within the hour, checks every minute to see if the post is within the minute
@@ -134,8 +143,6 @@ def run() -> None:
         Sleeps for a minute after posting
     """
     while True:
-        log("Looped")
-
         now = datetime.datetime.now(pytz.timezone('US/Pacific'))
         next_run = datetime.datetime(now.year, now.month, now.day, RUN_HOUR, RUN_MINUTE, 0)
         delta = next_run - now.replace(tzinfo=None)
@@ -161,8 +168,14 @@ def run() -> None:
             log("Sleeping for 1 hour")
             time.sleep(3600)
 
-# ----------------------------------------------------------------------------- EXECUTION
+# ------------------------------------------------------------------- EXECUTION
 
 if __name__ == '__main__':
     log("Starting up")
-    run()
+    try:
+        run()
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
+        quit()
+    except Exception as ex:
+        log(traceback.format_exc())
